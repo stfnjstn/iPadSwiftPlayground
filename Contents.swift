@@ -1,4 +1,3 @@
-
 import SpriteKit
 import PlaygroundSupport
 
@@ -30,66 +29,52 @@ class gameScene: SKScene, SKPhysicsContactDelegate {
     var gameRunning = false 
     
     // Screen elements
-    let racket = SKShapeNode(rect: CGRect(origin: CGPoint.zero, size: CGSize(width: ballRadius, height: racketHeight)))
-    let ball = SKShapeNode(circleOfRadius: ballRadius)
+    var racket: SKShapeNode?
+    var ball: SKShapeNode?
     let scoreLabel = SKLabelNode()
     
     // Initialize objects during first start
     override func sceneDidLoad() {
+        super.sceneDidLoad()
+        var resr = SKShapeNode()
         scoreLabel.fontSize = 40
         scoreLabel.position = CGPoint(x: width/2, y: height - 100)
         self.addChild(scoreLabel)
         
-        createWall()
+        createWalls()
         createBall(position: CGPoint(x: width / 2, y: height / 2))
         createRacket()
         startNewGame()
         self.physicsWorld.contactDelegate = self
     }
     
-    // Create the racket sprite
-    func createRacket() {
-        self.addChild(racket)
-        racket.fillColor = #colorLiteral(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
-        let physicsBody = SKPhysicsBody(rectangleOf: racket.frame.size, center: CGPoint(x: racket.frame.midX, y: racket.frame.midY))
-        physicsBody.affectedByGravity = false
-        physicsBody.isDynamic = false
-        physicsBody.collisionBitMask = CollisionTypes.Ball.rawValue
-        physicsBody.categoryBitMask = CollisionTypes.Racket.rawValue
-        physicsBody.contactTestBitMask = CollisionTypes.Ball.rawValue
-        racket.physicsBody = physicsBody
-    }
-    
     // Create the ball sprite 
     func createBall(position: CGPoint) {
         let physicsBody = SKPhysicsBody(circleOfRadius: ballRadius)
+        ball = SKShapeNode(circleOfRadius: ballRadius)
         physicsBody.categoryBitMask = CollisionTypes.Ball.rawValue
         physicsBody.collisionBitMask = CollisionTypes.Wall.rawValue | CollisionTypes.Ball.rawValue | CollisionTypes.Racket.rawValue
         physicsBody.affectedByGravity = false
         physicsBody.restitution = 1
         physicsBody.linearDamping = 0
         physicsBody.velocity = CGVector(dx: -500, dy: 500)
-        ball.physicsBody = physicsBody
-        ball.position = position
-        ball.fillColor = #colorLiteral(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
+        ball!.physicsBody = physicsBody
+        ball!.position = position
+        ball!.fillColor = SKColor.white
     }
     
     // Create the walls
-    func createWall() {
-        let left = SKShapeNode(rect: CGRect(origin: CGPoint(x: 0, y: 0), size: CGSize(width: ballRadius, height: height)))
-        left.fillColor = UIColor.white()
-        self.addChild(left)
-        left.physicsBody = getWallPhysicsbody(rect: left.frame)
-        
-        let bottom = SKShapeNode(rect: CGRect(origin: CGPoint(x: 0, y: 0), size: CGSize(width: width, height: ballRadius)))
-        bottom.fillColor = UIColor.white()
-        self.addChild(bottom)
-        bottom.physicsBody = getWallPhysicsbody(rect: bottom.frame)
-        
-        let top = SKShapeNode(rect: CGRect(origin: CGPoint(x: 0, y: height - ballRadius), size: CGSize(width: width, height: ballRadius)))
-        top.fillColor = UIColor.white()
-        self.addChild(top)
-        top.physicsBody = getWallPhysicsbody(rect: top.frame)
+    func createWalls() {
+        createWall(rect: CGRect(origin: CGPoint(x: 0, y: 0), size: CGSize(width: ballRadius, height: height)))
+        createWall(rect: CGRect(origin: CGPoint(x: 0, y: 0), size: CGSize(width: width, height: ballRadius)))
+        createWall(rect: CGRect(origin: CGPoint(x: 0, y: height - ballRadius), size: CGSize(width: width, height: ballRadius)))
+    }
+    
+    func createWall(rect: CGRect) {
+        let node = SKShapeNode(rect: rect)
+        node.fillColor = SKColor.white
+        node.physicsBody = getWallPhysicsbody(rect: rect)
+        self.addChild(node)
     }
     
     // Create the physics objetcs to handle wall collisions 
@@ -102,11 +87,25 @@ class gameScene: SKScene, SKPhysicsContactDelegate {
         return physicsBody
     }
     
+    // Create the racket sprite
+    func createRacket() {
+        racket =  SKShapeNode(rect: CGRect(origin: CGPoint.zero, size: CGSize(width: ballRadius, height: racketHeight)))
+        self.addChild(racket!)
+        racket!.fillColor = SKColor.white
+        let physicsBody = SKPhysicsBody(rectangleOf: racket!.frame.size, center: CGPoint(x: racket!.frame.midX, y: racket!.frame.midY))
+        physicsBody.affectedByGravity = false
+        physicsBody.isDynamic = false
+        physicsBody.collisionBitMask = CollisionTypes.Ball.rawValue
+        physicsBody.categoryBitMask = CollisionTypes.Racket.rawValue
+        physicsBody.contactTestBitMask = CollisionTypes.Ball.rawValue
+        racket!.physicsBody = physicsBody
+    }
+    
     // Start a new game
     func startNewGame() {
         score = 0
         scoreLabel.text = "0"
-        racket.position = CGPoint(x: width - ballRadius * 2, y: height / 2)
+        racket!.position = CGPoint(x: width - ballRadius * 2, y: height / 2)
         
         var counter = 3
         let startLabel = SKLabelNode(text: "Game Over")
@@ -127,8 +126,8 @@ class gameScene: SKScene, SKPhysicsContactDelegate {
                     startLabel.run(SKAction.sequence([fadeIn, fadeOut]), completion: {
                         startLabel.removeFromParent()
                         self.gameRunning = true
-                        self.ball.position = CGPoint(x: 30, y: height / 2)
-                        self.addChild(self.ball)
+                        self.ball!.position = CGPoint(x: 30, y: height / 2)
+                        self.addChild(self.ball!)
                     })
                 })
             })
@@ -169,26 +168,29 @@ class gameScene: SKScene, SKPhysicsContactDelegate {
     
     // Move the racket up or down
     func moveRacket(dt: TimeInterval) {
-        if direction == Direction.Up && racket.position.y < height - racketHeight {
-            racket.position.y = racket.position.y + CGFloat(racketSpeed * dt) 
-        } else if direction == Direction.Down && racket.position.y > 0 {
-            racket.position.y = racket.position.y - CGFloat(racketSpeed * dt)
+        if direction == Direction.Up && racket!.position.y < height - racketHeight {
+            racket!.position.y = racket!.position.y + CGFloat(racketSpeed * dt) 
+        } else if direction == Direction.Down && racket!.position.y > 0 {
+            racket!.position.y = racket!.position.y - CGFloat(racketSpeed * dt)
         }
     }
     
     // Check if the ball is still on screen
     // Game Over animation
     func checkGameOver() {
-        if ball.position.x > CGFloat(width) {
+        if ball!.position.x > CGFloat(width) {
             gameRunning = false
-            ball.removeFromParent()
+            ball!.removeFromParent()
             let gameOverLabel = SKLabelNode(text: "Game Over")
             gameOverLabel.position = CGPoint(x: width / 2, y: height / 2)
             gameOverLabel.fontSize = 80
             self.addChild(gameOverLabel)
             
+            // Game Over animation
             let rotateAction = SKAction.rotate(byAngle: CGFloat(M_PI), duration: 1)
-            gameOverLabel.run(SKAction.repeat(rotateAction, count: 2), completion: {
+            let fadeInAction = SKAction.fadeIn(withDuration: 2)
+            gameOverLabel.run(SKAction.repeat(rotateAction, count: 2))
+            gameOverLabel.run(SKAction.scale(to: 0, duration: 2.5), completion: {
                 gameOverLabel.removeFromParent()
                 self.startNewGame()
             })
@@ -204,7 +206,7 @@ class gameScene: SKScene, SKPhysicsContactDelegate {
     }
 }
 
-// Initialize the playground and start the scene:
+//Initialize the playground and start the scene:
 let skView = SKView(frame: CGRect(origin: CGPoint.zero, size: CGSize(width: width, height: height)))
 let scene = gameScene(size: skView.frame.size)
 skView.presentScene(scene)
